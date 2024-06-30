@@ -1,6 +1,6 @@
-# CXRMate-ED: The Impact of Auxiliary Patient Data on Automated Chest X-Ray Report Generation and How to Incorporate It
+# The Impact of Auxiliary Patient Data on Automated Chest X-Ray Report Generation and How to Incorporate It
 
-This is the model and data pipeline for the CXRMate-ED model from: https://arxiv.org/pdf/2406.13181.
+This is the model and data pipeline for the model from: https://arxiv.org/pdf/2406.13181.
 
 The abstract from the paper:
 
@@ -32,11 +32,12 @@ database_path = '/scratch3/nic261/database/cxrmated_test.db'
 mimic_cxr_jpg_dir = '/scratch3/nic261/datasets/physionet.org/files/mimic-cxr-jpg/2.0.0/files'
 
 # Download model checkpoint:
-model = transformers.AutoModel.from_pretrained('aehrc/cxrmate-ed', trust_remote_code=True).to(device=device)
+ckpt_name = '...'  # Anonymised for now.
+model = transformers.AutoModel.from_pretrained(ckpt_name, trust_remote_code=True).to(device=device)
 model.eval()
 
 # Download tokenizer:
-tokenizer = transformers.PreTrainedTokenizerFast.from_pretrained('aehrc/cxrmate-ed')
+tokenizer = transformers.PreTrainedTokenizerFast.from_pretrained(ckpt_name)
 os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
 # Image transforms:
