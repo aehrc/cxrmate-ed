@@ -1,0 +1,38 @@
+defaults:
+  - //datasets/work/hb-mlaifsp-mm/work/repositories/transmodal/cxrmate2/config/virga_base.yaml@_global_
+  - //datasets/work/hb-mlaifsp-mm/work/repositories/transmodal/cxrmate2/config/virga/4gpu.yaml@_global_
+  - _self_
+
+num_nodes: 4
+mbatch_size: 2
+accumulated_mbatch_size: null
+
+module: modules.lightning_modules.cxrmate2.scst_rewards
+definition: SCSTCXRBERTBERTScoreReward
+
+lr: 5e-6
+
+max_epochs: 24
+
+precision: 32
+float32_matmul_precision: highest
+
+warm_start_ckpt_path: /datasets/work/hb-mlaifsp-mm/work/repositories/transmodal/cxrmate2/experiments/cxrmate2/ed_cxr/010_minus_medrecon_prior/trial_1/epoch=4-step=47750-val_report_chexbert_f1_macro=0.352807.ckpt
+warm_start_optimiser: false
+allow_warm_start_optimiser_partial: false
+
+image_dir: /scratch3/nic261/images
+
+module_load_apptainer: module unload pytorch; module load apptainer;
+
+num_warmup_steps: 5000
+
+learning_rate_monitor: True
+
+decoder_max_len: 512
+
+history: 0
+
+enable_progress_bar: True
+
+monitor: val_findings_bertscore_f1

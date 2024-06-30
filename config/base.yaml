@@ -1,0 +1,33 @@
+defaults:
+  - paths
+  - _self_
+
+devices: 1
+num_workers: 5
+
+sections_to_evaluate: [findings, report]
+max_images_per_study: 5
+
+# auto_resubmit_method: 'timeout'
+decoder_max_len: 256
+prefetch_factor: 2
+
+lr: 5e-5
+max_epochs: 32
+
+every_n_epochs: 1
+monitor: val_report_chexbert_f1_macro
+monitor_mode: max
+
+other_monitor: val_report_chexbert_f1_macro
+other_monitor_mode: max
+
+deterministic: False
+num_test_beams: 4
+weights_summary: full
+
+# enable_progress_bar: True
+
+stages_module: tools.stages.standard
+
+# mlflow_logger: True

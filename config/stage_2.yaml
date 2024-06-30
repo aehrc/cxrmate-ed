@@ -1,0 +1,21 @@
+defaults:
+  - base
+  - _self_
+
+module: modules.lightning_modules.ed_cxr.ablation
+definition: MinusMedrecon
+
+mbatch_size: 8
+accumulated_mbatch_size: null
+
+max_epochs: 16
+
+precision: 16-mixed
+float32_matmul_precision: highest
+
+warm_start_ckpt_path: /datasets/work/hb-mlaifsp-mm/work/repositories/transmodal/cxrmate2/experiments/cxrmate2/baseline/000_no_prompt_rev_e/trial_0/epoch=7-step=125416-val_report_chexbert_f1_macro=0.351025.ckpt
+warm_start_optimiser: False
+warm_start_ckpt_path_strict: False
+allow_warm_start_optimiser_partial: True
+
+history: 0

@@ -1,0 +1,6 @@
+exp_dir: /datasets/work/hb-mlaifsp-mm/work/experiments
+physionet_dir: /datasets/work/hb-mlaifsp-mm/work/archive/physionet.org/files
+dataset_dir: /scratch3/nic261/datasets
+ckpt_zoo_dir: /datasets/work/hb-mlaifsp-mm/work/checkpoints
+mimic_iv_duckdb_path: /scratch3/nic261/database/cxrmated_test.db
+jpg_lmdb_path: /scratch3/nic261/database/mimic_cxr_jpg_lmdb_rev_a.db
