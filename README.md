@@ -1,6 +1,6 @@
-# The Impact of Auxiliary Patient Data on Automated Chest X-Ray Report Generation and How to Incorporate It
+# CXRMate-ED: The Impact of Auxiliary Patient Data on Automated Chest X-Ray Report Generation and How to Incorporate It
 
-This is the model and data pipeline for the model from: https://arxiv.org/pdf/2406.13181.
+This is the model and data pipeline for the CXRMate-ED model from: https://arxiv.org/pdf/2406.13181.
 
 The abstract from the paper:
 
@@ -26,10 +26,10 @@ from torchvision.utils import make_grid
 
 # Device and paths:
 device = 'cuda'
-physionet_dir = '/datasets/work/hb-mlaifsp-mm/work/archive/physionet.org/files'
-dataset_dir = '/scratch3/nic261/datasets'
-database_path = '/scratch3/nic261/database/cxrmated_test.db'
-mimic_cxr_jpg_dir = '/scratch3/nic261/datasets/physionet.org/files/mimic-cxr-jpg/2.0.0/files'
+physionet_dir = '/.../physionet.org/files'
+dataset_dir = '/.../datasets'
+database_path = '/.../database/cxrmate_ed.db'
+mimic_cxr_jpg_dir = '/.../physionet.org/files/mimic-cxr-jpg/2.0.0/files'
 
 # Download model checkpoint:
 ckpt_name = '...'  # Anonymised for now.
