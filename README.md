@@ -147,6 +147,18 @@ Run the [prepare_dataset.ipynb](https://github.com/aehrc/anon/blob/main/prepare_
 
 Generated reports (findings and impression sections) for the test set are provided in [`test_set_generated_reports`](https://github.com/aehrc/anon/blob/main/test_set_generated_reports).
 
+## Environment
+
+The used packages can be found in `requirements.txt`.
+
+A virtual environment can be created via:
+```shell
+python -m venv venv
+source venv/bin/activate
+python -m pip install --upgrade pip
+python -m pip install --upgrade -r requirements.txt
+```
+
 ## Training
 
 Training is performed using [`dlhpcstarter`](https://github.com/csiro-mlai/dl_hpc_starter_pack) and [PyTorch Lightning](https://lightning.ai).
