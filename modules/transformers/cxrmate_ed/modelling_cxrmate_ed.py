@@ -6,7 +6,6 @@ from typing import Optional, Tuple, Union
 
 import duckdb
 import pandas as pd
-import streamlit as st
 import torch
 import transformers
 from torch.nn import CrossEntropyLoss
@@ -26,7 +25,7 @@ from .modelling_uniformer import MultiUniFormerWithProjectionHead
 from .records import EDCXRSubjectRecords
 from .tables import ed_module_tables, mimic_cxr_tables
 
-logger = logging.get_logger(__name__)
+logger = logging.get_logger(__name__)      
 
 
 def create_lookup_table(df, columns, start_idx):
@@ -893,6 +892,7 @@ class MIMICIVEDCXRMultimodalModel(VisionEncoderDecoderModel):
         right = torch.cat((upper_right, lower_right), dim=2)
 
         mixed_causality_4d_attention_mask = torch.cat((left, right), dim=-1)
+        
         return mixed_causality_4d_attention_mask
     
     @staticmethod
@@ -1123,7 +1123,6 @@ class MIMICIVEDCXRMultimodalModel(VisionEncoderDecoderModel):
             records.mimic_cxr_tables['mimic_cxr_sectioned'].text_columns = ['indication', 'history']
         
         dataset = StudyIDEDStayIDSubset(
-                mimic_iv_duckdb_path=database_path,
                 dataset_dir=mimic_cxr_jpg_dir,
                 transforms=transforms,
                 split=split,

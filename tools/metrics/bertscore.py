@@ -4,6 +4,7 @@ import os
 
 import torch
 from bert_score import BERTScorer
+
 # from pathlib import Path
 from torchmetrics import Metric
 
@@ -37,12 +38,7 @@ class BERTScoreRoBERTaLargeMetric(MIMICCXRReportGenerationMetric):
             lang='en',
             device=self.device,
             rescale_with_baseline=True,
-            # baseline_path=os.path.join(self.ckpt_dir, 'bert_score', 'rescale_baseline', 'en', 'roberta-large.tsv'),
         )
-
-        # RoBERTa tokenizer:
-        # self.tokenizer = AutoTokenizer.from_pretrained(os.path.join(self.ckpt_dir, 'roberta-large'))
-        # os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
     def cleanup_metric(self):
         # del self.bert_scorer, self.tokenizer

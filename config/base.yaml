@@ -26,8 +26,4 @@ deterministic: False
 num_test_beams: 4
 weights_summary: full
 
-# enable_progress_bar: True
-
-stages_module: tools.stages.standard
-
-# mlflow_logger: True
+stages_module: tools.stages

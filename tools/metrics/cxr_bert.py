@@ -1,7 +1,6 @@
 import torch
 from transformers import AutoModel, AutoTokenizer
 
-from modules.transformers.microsoft.modelling_cxrbert import CXRBertModel
 from tools.metrics.mimic_cxr import MIMICCXRReportGenerationMetric
 
 

@@ -11,7 +11,7 @@ The model and data pipeline are available on Hugging Face Hub:
 
 https://huggingface.co/aehrc/cxrmate-ed
 
-## Example
+#### Inference example:
 
 ```python
 import torch
@@ -26,10 +26,10 @@ from torchvision.utils import make_grid
 
 # Device and paths:
 device = 'cuda'
-physionet_dir = '/.../physionet.org/files'
-dataset_dir = '/.../datasets'
-database_path = '/.../database/cxrmate_ed.db'
-mimic_cxr_jpg_dir = '/.../physionet.org/files/mimic-cxr-jpg/2.0.0/files'
+physionet_dir = '/home/user/physionet.org/files'  # Where MIMIC-CXR, MIMIC-CXR-JPG, and MIMIC-IV-ED are stored.
+dataset_dir = '/home/user/datasets'  # Some outputs of prepare_data() will be stored here, e.g, the report sections.
+database_path = '/home/user/database/cxrmate_ed.db'  # The DuckDB database used to manage the tables of the dataset will be saved here.
+mimic_cxr_jpg_dir = '/home/user/physionet.org/files/mimic-cxr-jpg/2.0.0/files'  # The path to the JPG images of MIMIC-CXR-JPG. This could be different to physionet_dir to leverage faster storage.
 
 # Download model checkpoint:
 ckpt_name = '...'  # Anonymised for now.
@@ -110,6 +110,71 @@ for i,j in zip(findings, impression):
 
 ```
 
+## MIMIC-CXR & MIMIC-IV-ED Dataset:
+
+MIMIC-CXR, MIMIC-CXR-JPG, and MIMIC-IV-ED must be in the same Physio Net directory. E.g.:
+
+```shell
+user@cluster:~$ ls /home/user/physionet.org/files
+mimic-cxr  mimic-cxr-jpg  mimic-iv-ed
+```
+
+### Download MIMIC-CXR-JPG:
+Download the MIMIC-CXR-JPG dataset from https://physionet.org/content/mimic-cxr-jpg, e.g.,
+```shell
+wget -r -N -c -np --user <username> --ask-password https://physionet.org/files/mimic-cxr-jpg/2.1.0/
+```
+Note that you must be a credentialised user to access this dataset.
+
+### Download the reports from MIMIC-CXR:
+MIMIC-CXR-JPG does not include the radiology reports and are instead included with MIMIC-CXR (the DICOM version of the dataset). To download this dataset and avoid downloading the DICOM files (which are very large), use `--reject dcm` with the wget command from https://physionet.org/content/mimic-cxr, e.g, 
+```shell
+wget -r -N -c -np --reject dcm --user <username> --ask-password https://physionet.org/files/mimic-cxr/2.0.0/
+```
+Note that you must be a credentialised user to access this dataset.
+
+### Download MIMIC-IV-ED:
+Download the MIMIC-IV-ED dataset from https://physionet.org/content/mimic-iv-ed, e.g.,
+```shell
+wget -r -N -c -np --user <username> --ask-password https://physionet.org/files/mimic-iv-ed/2.2/
+```
+Note that you must be a credentialised user to access this dataset.
+
+### Prepare the dataset:
+Run the [prepare_dataset.ipynb](https://github.com/aehrc/anon/blob/main/prepare_dataset.ipynb) notebook and change the paths accordingly. It should take roughly an hour. The most time-consuming tasks are extracting sections from the radiology reports and matching CXR studies to ED stays.
+
 ## Training
 
-Coming soon...
+Training is performed using [`dlhpcstarter`](https://github.com/csiro-mlai/dl_hpc_starter_pack) and [PyTorch Lightning](https://lightning.ai).
+
+There are three stages of training. The first two are with teacher forcing, with the last stage using reinforcement learning.
+
+First, configure the paths at config/paths.
+
+#### Stage 1: Training on CXRs
+
+```shell
+dlhpcstarter -t cxrmate_ed -c config/stage_1 --train --test
+```
+
+#### Stage 2: Training on CXRs + patient data embeddings
+
+First, set the `warm_start_ckpt_path` to the checkpoint from stage 1, which can be found in the `exp_dir` (defined in `config/paths.yaml`), e.g., `exp_dir/cxrmate_ed/stage_1/trial_0/epoch=7-step=125416-val_report_chexbert_f1_macro=0.351025.ckpt`.
+
+```shell
+dlhpcstarter -t cxrmate_ed -c config/stage_2 --train --test
+```
+
+#### Stage 3: Reinforcement learning with self-critical sequence training
+
+First, set the `warm_start_ckpt_path` to the checkpoint from stage 2, which can be found in the `exp_dir` (defined in `config/paths.yaml`), e.g., `exp_dir/cxrmate_ed/stage_2/trial_0/epoch=4-step=47750-val_report_chexbert_f1_macro=0.352807.ckpt`.
+
+Note that four GPUs are used with [DDP](https://lightning.ai/docs/pytorch/stable/accelerators/gpu_intermediate.html#distributed-data-parallel) during this stage. This can be modified in config/stage_3.yaml.
+
+```shell
+dlhpcstarter -t cxrmate_ed -c config/stage_3 --train --test
+```
+
+## To Do:
+
+Revice metrics. The current ones are difficult to install. Only BERTScore and CXR-BERT are easy to get working currently (as they rely on HF Hub).

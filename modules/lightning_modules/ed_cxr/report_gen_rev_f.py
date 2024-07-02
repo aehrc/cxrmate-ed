@@ -11,25 +11,25 @@ from torchvision.transforms import v2
 from modules.lightning_modules.ed_cxr.report_gen_rev_e import (
     MIMICIVEDCXRReportGen as MIMICIVEDCXRReportGenRevE,
 )
-from modules.transformers.cxrmateed.modelling_mimic_iv_ed_cxr_rev_c import (
-    MIMICIVEDCXRMultimodalModel,
-)
-from modules.transformers.uniformer.configuration_uniformer import (
+from modules.transformers.cxrmate_ed.configuration_uniformer import (
     UniFormerWithProjectionHeadConfig,
 )
-from modules.transformers.uniformer.modelling_uniformer_rev_b import (
+from modules.transformers.cxrmate_ed.modelling_cxrmate_ed import (
+    MIMICIVEDCXRMultimodalModel,
+)
+from modules.transformers.cxrmate_ed.modelling_uniformer import (
     MultiUniFormerWithProjectionHead,
 )
-from tools.mimic_iv.ed_cxr.records_rev_a import EDCXRSubjectRecords
-from tools.mimic_iv.ed_cxr.tables_rev_a import NUM_ED_CXR_TOKEN_TYPE_IDS
+from modules.transformers.cxrmate_ed.records import EDCXRSubjectRecords
+from modules.transformers.cxrmate_ed.tables import NUM_ED_CXR_TOKEN_TYPE_IDS
 
 
 class MIMICIVEDCXRReportGen(MIMICIVEDCXRReportGenRevE):
     
-    def __init__(self, records=None, mimic_iv_duckdb_path=None, add_time_deltas=True, **kwargs):
+    def __init__(self, records=None, database_path=None, add_time_deltas=True, **kwargs):
         self.add_time_deltas = add_time_deltas
-        records = EDCXRSubjectRecords(database_path=mimic_iv_duckdb_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1)) if records is None else records
-        super().__init__(records=records, mimic_iv_duckdb_path=mimic_iv_duckdb_path, **kwargs)
+        records = EDCXRSubjectRecords(database_path=database_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1)) if records is None else records
+        super().__init__(records=records, database_path=database_path, **kwargs)
     
     def init_modules(self):
         """
@@ -42,8 +42,7 @@ class MIMICIVEDCXRReportGen(MIMICIVEDCXRReportGenRevE):
                 index_value_encoder_config[k] = v.total_indices
 
         # Decoder tokenizer:
-        encoder_decoder_ckpt_name = f'{self.ckpt_zoo_dir}/mimic_iv_tokenizers/bpe_cxr_findings_impression_indication_history_ed_medrecon_vitalsign_triage'
-        self.tokenizer = transformers.PreTrainedTokenizerFast.from_pretrained(encoder_decoder_ckpt_name)
+        self.tokenizer = transformers.PreTrainedTokenizerFast.from_pretrained('aehrc/cxrmate-ed')
         os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
         # Print the special tokens:
@@ -93,13 +92,10 @@ class MIMICIVEDCXRReportGen(MIMICIVEDCXRReportGenRevE):
         config_encoder = UniFormerWithProjectionHeadConfig(
             projection_size=config_decoder.hidden_size,
         )
-        encoder_ckpt_name = 'uniformer_base_tl_384'
 
         # Encoder-to-decoder model:
         if self.warm_start_modules:
-            encoder = MultiUniFormerWithProjectionHead.from_pretrained(
-                f'{self.ckpt_zoo_dir}/{encoder_ckpt_name}', config=config_encoder
-            )
+            encoder = MultiUniFormerWithProjectionHead.from_pretrained('aehrc/uniformer_base_tl_384', config=config_encoder)
             decoder = transformers.LlamaForCausalLM(config=config_decoder)
             self.encoder_decoder = MIMICIVEDCXRMultimodalModel(encoder=encoder, decoder=decoder)
             

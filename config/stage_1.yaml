@@ -1,11 +1,9 @@
 defaults:
-  - //datasets/work/hb-mlaifsp-mm/work/repositories/transmodal/cxrmate2/config/virga_base.yaml@_global_
+  - base
   - _self_
 
 module: modules.lightning_modules.baseline.no_prompt
 definition: NoPrompt
-
-num_nodes: 1
 
 mbatch_size: 8
 accumulated_mbatch_size: null

@@ -17,5 +17,3 @@ warm_start_ckpt_path: /datasets/work/hb-mlaifsp-mm/work/repositories/transmodal/
 warm_start_optimiser: False
 warm_start_ckpt_path_strict: False
 allow_warm_start_optimiser_partial: True
-
-history: 0

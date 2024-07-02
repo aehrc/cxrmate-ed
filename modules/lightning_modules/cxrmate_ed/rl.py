@@ -1,10 +1,6 @@
 import torch
 import transformers
-from torch.utils.data import DataLoader
 
-from data.dataset.study_id_ed_stay_id_longitudinal import (
-    StudyIDEDStayIDLongitudinalSubset,
-)
 from modules.lightning_modules.ed_cxr.ablation import MinusMedrecon
 
 

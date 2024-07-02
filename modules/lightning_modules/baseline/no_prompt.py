@@ -1,6 +1,5 @@
 import math
 
-from data.dataset.study_id_ed_stay_id_rev_b import StudyIDEDStayIDSubset
 from modules.lightning_modules.ed.individual import (
     EDExclusive,
     MedReconExclusive,
@@ -11,13 +10,13 @@ from modules.lightning_modules.ed_cxr.freeze_encoder_partial_warm_start_optimise
     FreezeEncoderPartialWarmStartOptimiser,
 )
 from modules.lightning_modules.ed_cxr.report_gen_rev_f import MIMICIVEDCXRReportGen
-from tools.mimic_iv.ed_cxr.records_rev_a import EDCXRSubjectRecords
+from modules.transformers.cxrmate_ed.records import EDCXRSubjectRecords
 
 
 class NoPrompt(MIMICIVEDCXRReportGen):
 
-    def __init__(self, mimic_iv_duckdb_path, **kwargs):
-        records = EDCXRSubjectRecords(database_path=mimic_iv_duckdb_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1))
+    def __init__(self, database_path, **kwargs):
+        records = EDCXRSubjectRecords(database_path=database_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1))
 
         records.ed_module_tables = {}
         records.mimic_cxr_tables = {k: records.mimic_cxr_tables[k] for k in ['mimic_cxr_sectioned']}
@@ -28,9 +27,9 @@ class NoPrompt(MIMICIVEDCXRReportGen):
 
 class NoPromptEDExclusive(EDExclusive):
 
-    def __init__(self, mimic_iv_duckdb_path, **kwargs):
+    def __init__(self, database_path, **kwargs):
 
-        records = EDCXRSubjectRecords(database_path=mimic_iv_duckdb_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1))
+        records = EDCXRSubjectRecords(database_path=database_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1))
         records.ed_module_tables = {}
         records.mimic_cxr_tables = {k: records.mimic_cxr_tables[k] for k in ['mimic_cxr_sectioned']}
         records.mimic_cxr_tables['mimic_cxr_sectioned'].text_columns = []
@@ -39,9 +38,9 @@ class NoPromptEDExclusive(EDExclusive):
 
 class NoPromptMedReconExclusive(MedReconExclusive):
 
-    def __init__(self, mimic_iv_duckdb_path, **kwargs):
+    def __init__(self, database_path, **kwargs):
 
-        records = EDCXRSubjectRecords(database_path=mimic_iv_duckdb_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1))
+        records = EDCXRSubjectRecords(database_path=database_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1))
         records.ed_module_tables = {}
         records.mimic_cxr_tables = {k: records.mimic_cxr_tables[k] for k in ['mimic_cxr_sectioned']}
         records.mimic_cxr_tables['mimic_cxr_sectioned'].text_columns = []
@@ -50,9 +49,9 @@ class NoPromptMedReconExclusive(MedReconExclusive):
 
 class NoPromptVitalSignExclusive(VitalSignExclusive):
 
-    def __init__(self, mimic_iv_duckdb_path, **kwargs):
+    def __init__(self, database_path, **kwargs):
 
-        records = EDCXRSubjectRecords(database_path=mimic_iv_duckdb_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1))
+        records = EDCXRSubjectRecords(database_path=database_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1))
         records.ed_module_tables = {}
         records.mimic_cxr_tables = {k: records.mimic_cxr_tables[k] for k in ['mimic_cxr_sectioned']}
         records.mimic_cxr_tables['mimic_cxr_sectioned'].text_columns = []
@@ -61,9 +60,9 @@ class NoPromptVitalSignExclusive(VitalSignExclusive):
 
 class NoPromptPYXISExclusive(PYXISExclusive):
 
-    def __init__(self, mimic_iv_duckdb_path, **kwargs):
+    def __init__(self, database_path, **kwargs):
 
-        records = EDCXRSubjectRecords(database_path=mimic_iv_duckdb_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1))
+        records = EDCXRSubjectRecords(database_path=database_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1))
         records.ed_module_tables = {}
         records.mimic_cxr_tables = {k: records.mimic_cxr_tables[k] for k in ['mimic_cxr_sectioned']}
         records.mimic_cxr_tables['mimic_cxr_sectioned'].text_columns = []
@@ -73,9 +72,9 @@ class NoPromptPYXISExclusive(PYXISExclusive):
     
 class NoPrompFreezeEncoderPartialWarmStartOptimiser(FreezeEncoderPartialWarmStartOptimiser):
 
-    def __init__(self, mimic_iv_duckdb_path, **kwargs):
+    def __init__(self, database_path, **kwargs):
 
-        records = EDCXRSubjectRecords(database_path=mimic_iv_duckdb_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1))
+        records = EDCXRSubjectRecords(database_path=database_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1))
         records.ed_module_tables = {}
         records.mimic_cxr_tables = {k: records.mimic_cxr_tables[k] for k in ['mimic_cxr_sectioned']}
         records.mimic_cxr_tables['mimic_cxr_sectioned'].text_columns = []

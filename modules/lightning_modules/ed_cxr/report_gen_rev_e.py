@@ -9,26 +9,25 @@ from timm.data.constants import IMAGENET_DEFAULT_MEAN, IMAGENET_DEFAULT_STD
 from torch.utils.data import DataLoader
 from torchvision.transforms import v2
 
-from data.dataset.study_id_ed_stay_id_rev_b import StudyIDEDStayIDSubset
-from modules.transformers.mimic_iv_ed_cxr.modelling_mimic_iv_ed_cxr_rev_b import (
-    MIMICIVEDCXRMultimodalModel,
-)
-from modules.transformers.uniformer.configuration_uniformer import (
+from modules.transformers.cxrmate_ed.configuration_uniformer import (
     UniFormerWithProjectionHeadConfig,
 )
-from modules.transformers.uniformer.modelling_uniformer_rev_b import (
+from modules.transformers.cxrmate_ed.dataset import StudyIDEDStayIDSubset
+from modules.transformers.cxrmate_ed.modelling_cxrmate_ed import (
+    MIMICIVEDCXRMultimodalModel,
+)
+from modules.transformers.cxrmate_ed.modelling_uniformer import (
     MultiUniFormerWithProjectionHead,
 )
+from modules.transformers.cxrmate_ed.records import EDCXRSubjectRecords
+from modules.transformers.cxrmate_ed.tables import NUM_ED_CXR_TOKEN_TYPE_IDS
 from tools.metrics.bertscore import BERTScoreRoBERTaLargeMetric
 from tools.metrics.chexbert import CheXbertClassificationMetrics
 from tools.metrics.coco import COCONLGMIMICCXRMetrics
 from tools.metrics.cxr_bert import CXRBERTMetric
-from tools.metrics.radgraph import RadGraphMetric
 from tools.metrics.report_ids_logger import ReportTokenIdentifiersLogger
 from tools.metrics.report_logger import ReportLogger
 from tools.metrics.size_logger import SizeLogger
-from tools.mimic_iv.ed_cxr.records import EDCXRSubjectRecords
-from tools.mimic_iv.ed_cxr.tables import NUM_ED_CXR_TOKEN_TYPE_IDS
 
 
 class MIMICIVEDCXRReportGen(LightningModule):
@@ -38,9 +37,7 @@ class MIMICIVEDCXRReportGen(LightningModule):
             warm_start_modules: bool,
             exp_dir_trial: str,
             dataset_dir: str,
-            physionet_dir: str,
-            mimic_iv_duckdb_path=None,
-            images_rocksdb_path=None,
+            database_path=None,
             records=None, 
             num_token_type_ids=None,
             ckpt_zoo_dir: Optional[str] = None,
@@ -56,10 +53,7 @@ class MIMICIVEDCXRReportGen(LightningModule):
             accumulate_over_dicoms: bool = False,
             nlg_val_metrics: list = ['bleu', 'cider', 'rouge'],
             nlg_test_metrics: list = ['bleu', 'cider', 'rouge', 'meteor'],
-            image_dir: Optional[str] = None,
-            module_load_apptainer: Optional[str] = None,
             use_radgraph_metric: bool = True,
-            debug: bool = False,
             **kwargs,
     ):
         LightningModule.__init__(self)
@@ -67,9 +61,7 @@ class MIMICIVEDCXRReportGen(LightningModule):
         self.warm_start_modules = warm_start_modules
         self.exp_dir_trial = exp_dir_trial
         self.dataset_dir = dataset_dir
-        self.physionet_dir = physionet_dir
-        self.mimic_iv_duckdb_path = mimic_iv_duckdb_path
-        self.images_rocksdb_path = images_rocksdb_path
+        self.database_path = database_path
         self.ckpt_zoo_dir = ckpt_zoo_dir
         self.mbatch_size = mbatch_size
         self.decoder_max_len = decoder_max_len
@@ -81,14 +73,11 @@ class MIMICIVEDCXRReportGen(LightningModule):
         self.prefetch_factor = prefetch_factor
         self.num_workers = num_workers
         self.accumulate_over_dicoms = accumulate_over_dicoms
-        self.image_dir = image_dir
-        self.module_load_apptainer = module_load_apptainer
         self.use_radgraph_metric = use_radgraph_metric
-        self.debug = debug
 
         self.ckpt_epoch = 0
 
-        self.records = EDCXRSubjectRecords(database_path=mimic_iv_duckdb_path) if records is None else records
+        self.records = EDCXRSubjectRecords(database_path=database_path) if records is None else records
         self.num_token_type_ids = NUM_ED_CXR_TOKEN_TYPE_IDS if num_token_type_ids is None else num_token_type_ids
 
         # Paths:
@@ -105,81 +94,64 @@ class MIMICIVEDCXRReportGen(LightningModule):
         self.val_metrics, self.test_metrics = [], []
         
         # COCO NLG metrics:
-        for i in self.sections_to_evaluate:
-            self.val_metrics.append(f'val_{i}_nlg')
-            setattr(
-                self,
-                self.val_metrics[-1],
-                COCONLGMIMICCXRMetrics(
-                    split=f'val_{i}',
-                    metrics=nlg_val_metrics,
-                    exp_dir=self.exp_dir_trial,
-                    accumulate_over_dicoms=self.accumulate_over_dicoms,
-                ),
-            )
+        # for i in self.sections_to_evaluate:
+        #     self.val_metrics.append(f'val_{i}_nlg')
+        #     setattr(
+        #         self,
+        #         self.val_metrics[-1],
+        #         COCONLGMIMICCXRMetrics(
+        #             split=f'val_{i}',
+        #             metrics=nlg_val_metrics,
+        #             exp_dir=self.exp_dir_trial,
+        #             accumulate_over_dicoms=self.accumulate_over_dicoms,
+        #         ),
+        #     )
         
-        # Cannot deepcopy either SPICE or METEOR:
-        for i in self.sections_to_evaluate:
-            self.test_metrics.append(f'test_{i}_nlg')
-            setattr(
-                self,
-                self.test_metrics[-1],
-                COCONLGMIMICCXRMetrics(
-                    split=f'test_{i}',
-                    metrics=nlg_test_metrics,
-                    exp_dir=self.exp_dir_trial,
-                    accumulate_over_dicoms=self.accumulate_over_dicoms,
-                ),
-            )
-
-        # RadGraph:
-        # if use_radgraph_metric:
-        #     for i in self.sections_to_evaluate:
-        #         self.test_metrics.append(f'test_{i}_radgraph')
-        #         setattr(
-        #             self,
-        #             self.test_metrics[-1],
-        #             RadGraphMetric(
-        #                 mbatch_size=1,
-        #                 exp_dir=self.exp_dir_trial,
-        #                 split=f'test_{i}',
-        #                 accumulate_over_dicoms=self.accumulate_over_dicoms,
-        #                 image_dir=self.image_dir,
-        #                 module_load_apptainer=self.module_load_apptainer,
-        #             ),
-        #         )
+        # # Cannot deepcopy either SPICE or METEOR:
+        # for i in self.sections_to_evaluate:
+        #     self.test_metrics.append(f'test_{i}_nlg')
+        #     setattr(
+        #         self,
+        #         self.test_metrics[-1],
+        #         COCONLGMIMICCXRMetrics(
+        #             split=f'test_{i}',
+        #             metrics=nlg_test_metrics,
+        #             exp_dir=self.exp_dir_trial,
+        #             accumulate_over_dicoms=self.accumulate_over_dicoms,
+        #         ),
+        #     )
 
         # CheXbert metrics:
-        for i in self.sections_to_evaluate:
-            self.val_metrics.append(f'val_{i}_chexbert')
-            setattr(
-                self,
-                self.val_metrics[-1],
-                CheXbertClassificationMetrics(
-                    bert_path='bert-base-uncased',
-                    checkpoint_path='stanford/chexbert/chexbert.pth',
-                    ckpt_dir=self.ckpt_zoo_dir,
-                    mbatch_size=1,
-                    exp_dir=self.exp_dir_trial,
-                    split=f'val_{i}',
-                    accumulate_over_dicoms=self.accumulate_over_dicoms,
-                )
-            )
-        for i in self.sections_to_evaluate:
-            self.test_metrics.append(f'test_{i}_chexbert')
-            setattr(
-                self,
-                self.test_metrics[-1],
-                CheXbertClassificationMetrics(
-                    bert_path='bert-base-uncased',
-                    checkpoint_path='stanford/chexbert/chexbert.pth',
-                    ckpt_dir=self.ckpt_zoo_dir,
-                    mbatch_size=1,
-                    exp_dir=self.exp_dir_trial,
-                    split=f'test_{i}',
-                    accumulate_over_dicoms=self.accumulate_over_dicoms,
-                )
-            )
+        # for i in self.sections_to_evaluate:
+        #     self.val_metrics.append(f'val_{i}_chexbert')
+        #     setattr(
+        #         self,
+        #         self.val_metrics[-1],
+        #         CheXbertClassificationMetrics(
+        #             bert_path='bert-base-uncased',
+        #             checkpoint_path='stanford/chexbert/chexbert.pth',
+        #             ckpt_dir=self.ckpt_zoo_dir,
+        #             mbatch_size=1,
+        #             exp_dir=self.exp_dir_trial,
+        #             split=f'val_{i}',
+        #             accumulate_over_dicoms=self.accumulate_over_dicoms,
+        #         )
+        #     )
+        # for i in self.sections_to_evaluate:
+        #     self.test_metrics.append(f'test_{i}_chexbert')
+        #     setattr(
+        #         self,
+        #         self.test_metrics[-1],
+        #         CheXbertClassificationMetrics(
+        #             bert_path='bert-base-uncased',
+        #             checkpoint_path='stanford/chexbert/chexbert.pth',
+        #             ckpt_dir=self.ckpt_zoo_dir,
+        #             mbatch_size=1,
+        #             exp_dir=self.exp_dir_trial,
+        #             split=f'test_{i}',
+        #             accumulate_over_dicoms=self.accumulate_over_dicoms,
+        #         )
+        #     )
         
         # CXR-BERT:
         for i in self.sections_to_evaluate:
@@ -264,8 +236,7 @@ class MIMICIVEDCXRReportGen(LightningModule):
                 index_value_encoder_config[k] = v.total_indices
 
         # Decoder tokenizer:
-        encoder_decoder_ckpt_name = f'{self.ckpt_zoo_dir}/mimic_iv_tokenizers/bpe_cxr_findings_impression_indication_history_ed_medrecon_vitalsign_triage'
-        self.tokenizer = transformers.PreTrainedTokenizerFast.from_pretrained(encoder_decoder_ckpt_name)
+        self.tokenizer = transformers.PreTrainedTokenizerFast.from_pretrained('aehrc/cxrmate-ed')
         os.environ['TOKENIZERS_PARALLELISM'] = 'false'
 
         # Print the special tokens:
@@ -308,13 +279,10 @@ class MIMICIVEDCXRReportGen(LightningModule):
         config_encoder = UniFormerWithProjectionHeadConfig(
             projection_size=config_decoder.hidden_size,
         )
-        encoder_ckpt_name = 'uniformer_base_tl_384'
 
         # Encoder-to-decoder model:
         if self.warm_start_modules:
-            encoder = MultiUniFormerWithProjectionHead.from_pretrained(
-                f'{self.ckpt_zoo_dir}/{encoder_ckpt_name}', config=config_encoder
-            )
+            encoder = MultiUniFormerWithProjectionHead.from_pretrained('aehrc/uniformer_base_tl_384', config_encoder)
             decoder = transformers.LlamaForCausalLM(config=config_decoder)
             self.encoder_decoder = MIMICIVEDCXRMultimodalModel(encoder=encoder, decoder=decoder)
         else:
@@ -367,8 +335,6 @@ class MIMICIVEDCXRReportGen(LightningModule):
 
         if stage == 'fit' or stage is None:
             self.train_set = StudyIDEDStayIDSubset(
-                mimic_iv_duckdb_path=self.mimic_iv_duckdb_path,
-                images_rocksdb_path=self.images_rocksdb_path,
                 dataset_dir=self.mimic_cxr_dir,
                 transforms=self.train_transforms,
                 split='train',
@@ -383,8 +349,6 @@ class MIMICIVEDCXRReportGen(LightningModule):
 
         if stage == 'fit' or stage == 'validate' or stage is None:
             self.val_set = StudyIDEDStayIDSubset(
-                mimic_iv_duckdb_path=self.mimic_iv_duckdb_path,
-                images_rocksdb_path=self.images_rocksdb_path,
                 dataset_dir=self.mimic_cxr_dir,
                 transforms=self.test_transforms,
                 split='validate',
@@ -399,8 +363,6 @@ class MIMICIVEDCXRReportGen(LightningModule):
 
         if stage == 'test' or stage is None:
             self.test_set = StudyIDEDStayIDSubset(
-                mimic_iv_duckdb_path=self.mimic_iv_duckdb_path,
-                images_rocksdb_path=self.images_rocksdb_path,
                 dataset_dir=self.mimic_cxr_dir,
                 transforms=self.test_transforms,
                 split='test',

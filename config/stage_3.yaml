@@ -1,16 +1,14 @@
 defaults:
-  - //datasets/work/hb-mlaifsp-mm/work/repositories/transmodal/cxrmate2/config/virga_base.yaml@_global_
-  - //datasets/work/hb-mlaifsp-mm/work/repositories/transmodal/cxrmate2/config/virga/4gpu.yaml@_global_
+  - base
   - _self_
 
-num_nodes: 4
-mbatch_size: 2
-accumulated_mbatch_size: null
-
-module: modules.lightning_modules.cxrmate2.scst_rewards
+module: modules.lightning_modules.cxrmate_ed.scst_rewards
 definition: SCSTCXRBERTBERTScoreReward
 
-lr: 5e-6
+# 4 devices each with a mini-batch size of 8 equates to a mini-batch size of 32 with DDP.
+devices: 4
+mbatch_size: 8
+accumulated_mbatch_size: null
 
 max_epochs: 24
 
@@ -21,18 +19,9 @@ warm_start_ckpt_path: /datasets/work/hb-mlaifsp-mm/work/repositories/transmodal/
 warm_start_optimiser: false
 allow_warm_start_optimiser_partial: false
 
-image_dir: /scratch3/nic261/images
-
-module_load_apptainer: module unload pytorch; module load apptainer;
-
+lr: 5e-6
 num_warmup_steps: 5000
-
 learning_rate_monitor: True
-
-decoder_max_len: 512
-
 history: 0
-
 enable_progress_bar: True
-
 monitor: val_findings_bertscore_f1

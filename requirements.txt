@@ -1,43 +1,16 @@
 # General:
-# deepspeed
-# dlhpcstarter @ git+https://github.com/csiro-mlai/dl_hpc_starter_pack@d092644
+dlhpcstarter
 duckdb
-gdown
-libauc
-lightning
-lmdb
-monai
 pandas
-peft
-pydantic
 sentencepiece
-snakeviz
 tensorboard
-# torch==2.1.*
 torchmetrics
-torch-summary
-# torchvision==0.16.*
-transformers
-
-# Monitoring:
-# neptune-tensorboard
+transformers==4.40.*  # While this issue is being resolved: https://github.com/huggingface/transformers/issues/31171
 
 # Project specific:
 timm
-
-# Demonstration:
-streamlit
-
-# End-of-life:
-Pillow
 
 # Metrics:
 bert-score
 pycocoevalcap
 pycocotools
-radgraph
-
-# Results:
-pingouin
-plotnine
-pypdf

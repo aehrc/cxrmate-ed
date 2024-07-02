@@ -1,19 +1,17 @@
 import os
-import struct
 
-import lmdb
-import numpy as np
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
-from torchvision.io import decode_image, read_image
-
-from data.mimic_cxr.dcm_processing import load_and_preprocess_dcm_uint16
-from tools.mimic_iv.ed_cxr.records import EDCXRSubjectRecords
-from tools.utils import mimic_cxr_image_path
+from torchvision.io import read_image
 
 # Ordered by oblique, lateral, AP, and then PA views so that PA views are closest in position to the generated tokens (and oblique is furtherest).
 VIEW_ORDER = ['LPO', 'RAO', 'LAO', 'SWIMMERS', 'XTABLE LATERAL', 'LL', 'LATERAL',  'AP AXIAL', 'AP RLD', 'AP LLD', 'AP', 'PA RLD', 'PA LLD', 'PA']
+
+
+def mimic_cxr_image_path(dir, subject_id, study_id, dicom_id, ext='dcm'):
+    return os.path.join(dir, 'p' + str(subject_id)[:2], 'p' + str(subject_id),
+                        's' + str(study_id), str(dicom_id) + '.' + ext)
 
 
 class StudyIDEDStayIDSubset(Dataset):
@@ -25,46 +23,39 @@ class StudyIDEDStayIDSubset(Dataset):
     """
     def __init__(
         self, 
-        mimic_iv_duckdb_path, 
         split, 
+        records,
         dataset_dir=None, 
         max_images_per_study=None,
         transforms=None, 
         images=True,
         columns='study_id, dicom_id, subject_id, findings, impression',
         and_condition='',
-        records=None,
         study_id_inclusion_list=None,
         return_images=True,
         ed_module=True,
         extension='jpg',
-        images_rocksdb_path=None,
-        jpg_lmdb_path=None,
-        jpg_rocksdb_path=None,
     ):
         """
         Argument/s:
-            mimic_iv_duckdb_path - Path to MIMIC-IV DuckDB database.
             split - 'train', 'validate', or 'test'.
             dataset_dir - Dataset directory.
+            records - MIMIC-CXR & MIMIC-IV-ED records class instance.
             max_images_per_study - the maximum number of images per study.
             transforms - torchvision transformations.
             colour_space - PIL target colour space.
             images - flag to return processed images.
             columns - which columns to query on.
             and_condition - AND condition to add to the SQL query.
-            records - MIMIC-IV records class instance.
             study_id_inclusion_list - studies not in this list are excluded.
             return_images - return CXR images for the study as tensors.
             ed_module - use the ED module.
             extension - 'jpg' or 'dcm'.
-            images_rocksdb_path - path to image RocksDB database.
-            jpg_lmdb_path - path to LMDB .jpg database.
-            jpg_rocksdb_path - path to RocksDB .jpg database. 
         """
         super(StudyIDEDStayIDSubset, self).__init__()
         self.split = split
         self.dataset_dir = dataset_dir
+        self.records = records
         self.max_images_per_study = max_images_per_study
         self.transforms = transforms
         self.images = images
@@ -73,65 +64,19 @@ class StudyIDEDStayIDSubset(Dataset):
         self.return_images = return_images
         self.ed_module = ed_module
         self.extension = extension
-        self.images_rocksdb_path = images_rocksdb_path
-        self.jpg_lmdb_path = jpg_lmdb_path
-        self.jpg_rocksdb_path = jpg_rocksdb_path
         
         # If max images per study is not set:
         self.max_images_per_study = float('inf') if self.max_images_per_study is None else self.max_images_per_study
 
         assert self.extension == 'jpg' or self.extension == 'dcm'
 
-        if self.dataset_dir is not None and self.images_rocksdb_path is None:
+        if self.dataset_dir is not None:
             if self.extension == 'jpg':
                 if 'physionet.org/files/mimic-cxr-jpg/2.0.0/files' not in self.dataset_dir:
                     self.dataset_dir = os.path.join(self.dataset_dir, 'physionet.org/files/mimic-cxr-jpg/2.0.0/files')
             elif self.extension == 'dcm':
                 if 'physionet.org/files/mimic-cxr/2.0.0/files' not in self.dataset_dir:
                     self.dataset_dir = os.path.join(self.dataset_dir, 'physionet.org/files/mimic-cxr/2.0.0/files')
-
-        # Open the RocksDB images database:
-        if self.images_rocksdb_path is not None:
-            import rocksdb
-
-            # Define the column families:
-            column_families = {
-                b'shape': rocksdb.ColumnFamilyOptions(),
-                b'image': rocksdb.ColumnFamilyOptions(),
-            }
-            
-            opts = rocksdb.Options()
-            opts.max_open_files = 1e+5
-            self.images_db = rocksdb.DB(self.images_rocksdb_path, opts, column_families=column_families, read_only=True)
-            
-            self.shape_handle = self.images_db.get_column_family(b'shape')
-            self.image_handle = self.images_db.get_column_family(b'image')
-            
-            self.shape_dtype = np.int32
-            self.image_dtype = np.uint16
-
-        # Prepare the RocksDB .jpg database:
-        if self.jpg_rocksdb_path is not None:
-            import rocksdb
-            
-            opts = rocksdb.Options()
-            opts.max_open_files = 1e+5
-                    
-            self.images_db = rocksdb.DB(self.jpg_rocksdb_path, opts, read_only=True)
-            
-        # Prepare the LMDB .jpg database:
-        if self.jpg_lmdb_path is not None:
-            
-            print('Loading images using LMDB.')
-
-            # Map size:
-            map_size = int(0.65 * (1024 ** 4))
-            assert isinstance(map_size, int)
-            
-            self.env = lmdb.open(self.jpg_lmdb_path, map_size=map_size, lock=False, readonly=True)
-            self.txn = self.env.begin(write=False)
-
-        self.records = EDCXRSubjectRecords(database_path=mimic_iv_duckdb_path) if records is None else records
 
         query = f"""
         SELECT {columns}
@@ -268,115 +213,13 @@ class StudyIDEDStayIDSubset(Dataset):
 
         if self.extension == 'jpg':
 
-            if self.jpg_rocksdb_path is not None:
-                
-                # Convert to bytes:
-                key = bytes(dicom_id, 'utf-8')
-
-                # Retrieve image:
-                image = bytearray(self.images_db.get(key))
-                image = torch.frombuffer(image, dtype=torch.uint8)
-                image = decode_image(image)            
-
-            elif self.jpg_lmdb_path is not None:
-                
-                # Convert to bytes:
-                key = bytes(dicom_id, 'utf-8')
-
-                # Retrieve image:
-                image = bytearray(self.txn.get(key))
-                image = torch.frombuffer(image, dtype=torch.uint8)
-                image = decode_image(image)
-                
-            else:
-                image_file_path = mimic_cxr_image_path(self.dataset_dir, subject_id, study_id, dicom_id, self.extension)
-                image = read_image(image_file_path)
+            image_file_path = mimic_cxr_image_path(self.dataset_dir, subject_id, study_id, dicom_id, self.extension)
+            image = read_image(image_file_path)
 
         elif self.extension == 'dcm':
-            if self.images_rocksdb_path is not None:
-                
-                key = dicom_id.encode('utf-8')
-                
-                # Retrieve the serialized image shape associated with the key:
-                shape_bytes = self.images_db.get((self.shape_handle, key), key)
-                shape = struct.unpack('iii', shape_bytes)
-
-                np.frombuffer(shape_bytes, dtype=self.shape_dtype).reshape(3)
-
-                # Retrieve the serialized image data associated with the key:
-                image_bytes = self.images_db.get((self.image_handle, key), key)
-                image = np.frombuffer(image_bytes, dtype=self.image_dtype).reshape(*shape)
-
-            else:
-                image_file_path = mimic_cxr_image_path(self.dataset_dir, subject_id, study_id, dicom_id, self.extension)
-                image = load_and_preprocess_dcm_uint16(image_file_path)
-                
-            # Convert to a torch tensor:
-            image = torch.from_numpy(image)
+            raise NotImplementedError
 
         if self.transforms is not None:
             image = self.transforms(image)
 
         return image
-
-
-if __name__ == '__main__':
-    import time
-
-    from tqdm import tqdm
-
-    num_samples = 20
-    
-    datasets = []
-    datasets.append(
-        StudyIDEDStayIDSubset(
-            dataset_dir='/datasets/work/hb-mlaifsp-mm/work/archive',
-            mimic_iv_duckdb_path='/scratch3/nic261/database/mimic_iv_duckdb_rev_b.db',
-            split='train',
-            extension='jpg',
-            ed_module=False,
-        ),
-    )
-    
-    datasets.append(
-        StudyIDEDStayIDSubset(
-            dataset_dir='/scratch3/nic261/datasets',
-            mimic_iv_duckdb_path='/scratch3/nic261/database/mimic_iv_duckdb_rev_b.db',
-            split='train',
-            extension='jpg',
-            ed_module=False,
-        ),
-    )
-    
-    datasets.append(
-        StudyIDEDStayIDSubset(
-            jpg_lmdb_path='/scratch3/nic261/database/mimic_cxr_jpg_lmdb_rev_a.db',
-            mimic_iv_duckdb_path='/scratch3/nic261/database/mimic_iv_duckdb_rev_b.db',
-            split='train',
-            extension='jpg',
-            ed_module=False,
-        ),
-    )
-    
-    datasets.append(
-        StudyIDEDStayIDSubset(
-            jpg_rocksdb_path='/scratch3/nic261/database/mimic_cxr_jpg_rocksdb.db',
-            mimic_iv_duckdb_path='/scratch3/nic261/database/mimic_iv_duckdb_rev_b.db',
-            split='train',
-            extension='jpg',
-            ed_module=False,
-        )
-    )
-    
-    assert (datasets[1][0]['images'][0] == datasets[2][0]['images'][0]).all().item()
-    assert (datasets[1][5]['images'][0] == datasets[2][5]['images'][0]).all().item()
-
-    for d in datasets:
-        start_time = time.time()
-        indices = torch.randperm(len(d))[:num_samples]  # Get random indices.
-        for i in tqdm(indices):
-            _ = d[i]
-        end_time = time.time() 
-        elapsed_time = end_time - start_time
-        print(f"Elapsed time: {elapsed_time} seconds")
-        
