@@ -143,6 +143,10 @@ Note that you must be a credentialised user to access this dataset.
 ### Prepare the dataset:
 Run the [prepare_dataset.ipynb](https://github.com/aehrc/anon/blob/main/prepare_dataset.ipynb) notebook and change the paths accordingly. It should take roughly an hour. The most time-consuming tasks are extracting sections from the radiology reports and matching CXR studies to ED stays.
 
+## Generated reports
+
+Generated reports (findings and impression sections) for the test set are provided in [`test_set_generated_reports`](https://github.com/aehrc/anon/blob/main/test_set_generated_reports).
+
 ## Training
 
 Training is performed using [`dlhpcstarter`](https://github.com/csiro-mlai/dl_hpc_starter_pack) and [PyTorch Lightning](https://lightning.ai).
