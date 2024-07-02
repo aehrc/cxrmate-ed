@@ -95,12 +95,8 @@ output_ids = model.generate(
     special_token_ids=[tokenizer.sep_token_id],
     token_type_id_sections=model.decoder.config.section_ids,
     max_length=256,
-    bos_token_id=tokenizer.bos_token_id,
-    eos_token_id=tokenizer.eos_token_id,
-    pad_token_id=tokenizer.pad_token_id,
     num_beams=4,
     return_dict_in_generate=True,
-    use_cache=True,
 )['sequences']
 
 # Findings and impression section:
