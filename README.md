@@ -139,6 +139,24 @@ Note that you must be a credentialised user to access this dataset.
 ### Prepare the dataset:
 Run the [prepare_dataset.ipynb](https://github.com/aehrc/anon/blob/main/prepare_dataset.ipynb) notebook and change the paths accordingly. It should take roughly an hour. The most time-consuming tasks are extracting sections from the radiology reports and matching CXR studies to ED stays.
 
+Or, run the following:
+```python
+import transformers
+
+# Paths:
+physionet_dir = '/.../physionet.org/files'  # Where MIMIC-CXR, MIMIC-CXR-JPG, and MIMIC-IV-ED are stored.
+dataset_dir = '/.../datasets'  # Some outputs of prepare_data() will be stored here, e.g, the report sections.
+database_path = '/.../database/cxrmate_ed.db'  # The DuckDB database used to manage the tables of the dataset will be saved here.
+
+# Prepare the MIMIC-CXR & MIMIC-IV-ED dataset:
+model = transformers.AutoModel.from_pretrained('aehrc/cxrmate-ed', trust_remote_code=True)
+model.prepare_data(
+    physionet_dir=physionet_dir,
+    dataset_dir=dataset_dir,
+    database_path=database_path,
+)
+```
+
 ## Generated reports
 
 Generated reports (findings and impression sections) for the test set are provided in [`test_set_generated_reports`](https://github.com/aehrc/anon/blob/main/test_set_generated_reports).
