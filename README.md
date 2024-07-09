@@ -26,10 +26,8 @@ from torchvision.utils import make_grid
 
 # Device and paths:
 device = 'cuda'
-physionet_dir = '/home/user/physionet.org/files'  # Where MIMIC-CXR, MIMIC-CXR-JPG, and MIMIC-IV-ED are stored.
-dataset_dir = '/home/user/datasets'  # Some outputs of prepare_data() will be stored here, e.g, the report sections.
-database_path = '/home/user/database/cxrmate_ed.db'  # The DuckDB database used to manage the tables of the dataset will be saved here.
-mimic_cxr_jpg_dir = '/home/user/physionet.org/files/mimic-cxr-jpg/2.0.0/files'  # The path to the JPG images of MIMIC-CXR-JPG. This could be different to physionet_dir to leverage faster storage.
+physionet_dir = '/datasets/work/hb-mlaifsp-mm/work/archive/physionet.org/files'  # Where MIMIC-CXR, MIMIC-CXR-JPG, and MIMIC-IV-ED are stored.
+database_dir = '/scratch3/nic261/database/cxrmate_ed'  # The LMDB database for the JPGs and the DuckDB database for the tables will be saved here.
 
 # Download model checkpoint:
 ckpt_name = '...'  # Anonymised for now.
@@ -59,12 +57,11 @@ test_transforms = v2.Compose(
 # Prepare the MIMIC-CXR & MIMIC-IV-ED dataset:
 model.prepare_data(
     physionet_dir=physionet_dir,
-    dataset_dir=dataset_dir,
-    database_path=database_path,
+    database_dir=database_dir,
 )
 
 # Get the test set dataset & dataloader:
-test_set = model.get_dataset('test', test_transforms, database_path, mimic_cxr_jpg_dir)
+test_set = model.get_dataset(split='test', transforms=test_transforms, database_dir=database_dir)
 test_dataloader = DataLoader(
     test_set,
     batch_size=1, 
@@ -145,15 +142,13 @@ import transformers
 
 # Paths:
 physionet_dir = '/.../physionet.org/files'  # Where MIMIC-CXR, MIMIC-CXR-JPG, and MIMIC-IV-ED are stored.
-dataset_dir = '/.../datasets'  # Some outputs of prepare_data() will be stored here, e.g, the report sections.
-database_path = '/.../database/cxrmate_ed.db'  # The DuckDB database used to manage the tables of the dataset will be saved here.
+database_dir = '/.../database/cxrmate_ed'  # The LMDB database for the JPGs and the DuckDB database for the tables will be saved here.
 
 # Prepare the MIMIC-CXR & MIMIC-IV-ED dataset:
 model = transformers.AutoModel.from_pretrained('aehrc/cxrmate-ed', trust_remote_code=True)
 model.prepare_data(
     physionet_dir=physionet_dir,
-    dataset_dir=dataset_dir,
-    database_path=database_path,
+    database_dir=database_dir,
 )
 ```
 

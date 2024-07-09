@@ -1,9 +1,10 @@
 import os
 
+import lmdb
 import pandas as pd
 import torch
 from torch.utils.data import Dataset
-from torchvision.io import read_image
+from torchvision.io import decode_image, read_image
 
 # Ordered by oblique, lateral, AP, and then PA views so that PA views are closest in position to the generated tokens (and oblique is furtherest).
 VIEW_ORDER = ['LPO', 'RAO', 'LAO', 'SWIMMERS', 'XTABLE LATERAL', 'LL', 'LATERAL',  'AP AXIAL', 'AP RLD', 'AP LLD', 'AP', 'PA RLD', 'PA LLD', 'PA']
@@ -25,7 +26,8 @@ class StudyIDEDStayIDSubset(Dataset):
         self, 
         split, 
         records,
-        dataset_dir=None, 
+        mimic_cxr_jpg_lmdb_path=None,
+        mimic_cxr_dir=None, 
         max_images_per_study=None,
         transforms=None, 
         images=True,
@@ -39,8 +41,9 @@ class StudyIDEDStayIDSubset(Dataset):
         """
         Argument/s:
             split - 'train', 'validate', or 'test'.
-            dataset_dir - Dataset directory.
             records - MIMIC-CXR & MIMIC-IV-ED records class instance.
+            mimic_cxr_jpg_lmdb_path - JPG database for MIMIC-CXR-JPG.
+            mimic_cxr_dir - Path to the MIMIC-CXR directory containing the patient study subdirectories with the JPG or DCM images.
             max_images_per_study - the maximum number of images per study.
             transforms - torchvision transformations.
             colour_space - PIL target colour space.
@@ -54,7 +57,8 @@ class StudyIDEDStayIDSubset(Dataset):
         """
         super(StudyIDEDStayIDSubset, self).__init__()
         self.split = split
-        self.dataset_dir = dataset_dir
+        self.mimic_cxr_jpg_lmdb_path = mimic_cxr_jpg_lmdb_path
+        self.mimic_cxr_dir = mimic_cxr_dir
         self.records = records
         self.max_images_per_study = max_images_per_study
         self.transforms = transforms
@@ -68,15 +72,16 @@ class StudyIDEDStayIDSubset(Dataset):
         # If max images per study is not set:
         self.max_images_per_study = float('inf') if self.max_images_per_study is None else self.max_images_per_study
 
-        assert self.extension == 'jpg' or self.extension == 'dcm'
+        assert self.extension == 'jpg' or self.extension == 'dcm', '"extension" can only be either "jpg" or "dcm".'
+        assert (mimic_cxr_jpg_lmdb_path is None) != (mimic_cxr_dir is None), 'Either "mimic_cxr_jpg_lmdb_path" or "mimic_cxr_dir" can be set.'
 
-        if self.dataset_dir is not None:
+        if self.mimic_cxr_dir is not None and self.mimic_cxr_jpg_lmdb_path is None:
             if self.extension == 'jpg':
-                if 'physionet.org/files/mimic-cxr-jpg/2.0.0/files' not in self.dataset_dir:
-                    self.dataset_dir = os.path.join(self.dataset_dir, 'physionet.org/files/mimic-cxr-jpg/2.0.0/files')
+                if 'physionet.org/files/mimic-cxr-jpg/2.0.0/files' not in self.mimic_cxr_dir:
+                    self.mimic_cxr_dir = os.path.join(self.mimic_cxr_dir, 'physionet.org/files/mimic-cxr-jpg/2.0.0/files')
             elif self.extension == 'dcm':
-                if 'physionet.org/files/mimic-cxr/2.0.0/files' not in self.dataset_dir:
-                    self.dataset_dir = os.path.join(self.dataset_dir, 'physionet.org/files/mimic-cxr/2.0.0/files')
+                if 'physionet.org/files/mimic-cxr/2.0.0/files' not in self.mimic_cxr_dir:
+                    self.mimic_cxr_dir = os.path.join(self.mimic_cxr_dir, 'physionet.org/files/mimic-cxr/2.0.0/files')
 
         query = f"""
         SELECT {columns}
@@ -107,6 +112,18 @@ class StudyIDEDStayIDSubset(Dataset):
         self.num_study_ids = len(self.examples)
         self.num_dicom_ids = len(df['dicom_id'].unique().tolist())
         self.num_subject_ids = len(df['subject_id'].unique().tolist())
+
+        # Prepare the LMDB .jpg database:
+        if self.mimic_cxr_jpg_lmdb_path is not None:
+            
+            print('Loading images using LMDB.')
+
+            # Map size:
+            map_size = int(0.65 * (1024 ** 4))
+            assert isinstance(map_size, int)
+            
+            self.env = lmdb.open(self.mimic_cxr_jpg_lmdb_path, map_size=map_size, lock=False, readonly=True)
+            self.txn = self.env.begin(write=False)
 
     def __len__(self):
         return self.num_study_ids
@@ -212,9 +229,20 @@ class StudyIDEDStayIDSubset(Dataset):
         """
 
         if self.extension == 'jpg':
+            
+            if self.mimic_cxr_jpg_lmdb_path is not None:
+                
+                # Convert to bytes:
+                key = bytes(dicom_id, 'utf-8')
 
-            image_file_path = mimic_cxr_image_path(self.dataset_dir, subject_id, study_id, dicom_id, self.extension)
-            image = read_image(image_file_path)
+                # Retrieve image:
+                image = bytearray(self.txn.get(key))
+                image = torch.frombuffer(image, dtype=torch.uint8)
+                image = decode_image(image)
+            
+            else:   
+                image_file_path = mimic_cxr_image_path(self.mimic_cxr_dir, subject_id, study_id, dicom_id, self.extension)
+                image = read_image(image_file_path)
 
         elif self.extension == 'dcm':
             raise NotImplementedError

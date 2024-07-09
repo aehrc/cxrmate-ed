@@ -21,6 +21,7 @@ from transformers.utils import logging
 
 from .create_section_files import create_section_files
 from .dataset import StudyIDEDStayIDSubset
+from .lmdb_jpg import prepare_mimic_cxr_jpg_lmdb
 from .modelling_uniformer import MultiUniFormerWithProjectionHead
 from .records import EDCXRSubjectRecords
 from .tables import ed_module_tables, mimic_cxr_tables
@@ -917,11 +918,14 @@ class MIMICIVEDCXRMultimodalModel(VisionEncoderDecoderModel):
         return position_ids
     
     @staticmethod
-    def prepare_data(physionet_dir, database_path, dataset_dir=None):
+    def prepare_data(physionet_dir, database_dir):
         
-        dataset_dir = physionet_dir if dataset_dir is None else dataset_dir
-        
-        sectioned_dir = os.path.join(dataset_dir, 'mimic_cxr_sectioned')
+        Path(database_dir).mkdir(parents=True, exist_ok=True)
+       
+        mimic_iv_duckdb_path = os.path.join(database_dir, 'mimic_iv_duckdb.db')
+        mimic_cxr_jpg_lmdb_path = os.path.join(database_dir, 'mimic_cxr_jpg_lmdb.db')
+
+        sectioned_dir = os.path.join(database_dir, 'mimic_cxr_sectioned')
 
         mimic_cxr_sectioned_path = os.path.join(sectioned_dir, 'mimic_cxr_sectioned.csv')
         if not os.path.exists(mimic_cxr_sectioned_path):
@@ -947,9 +951,9 @@ class MIMICIVEDCXRMultimodalModel(VisionEncoderDecoderModel):
                 no_split=True,
             )
             
-        if not os.path.exists(database_path):
+        if not os.path.exists(mimic_iv_duckdb_path):
             
-            connect = duckdb.connect(database_path)
+            connect = duckdb.connect(mimic_iv_duckdb_path)
 
             csv_paths = []         
             csv_paths.append(glob(os.path.join(physionet_dir, 'mimic-iv-ed', '*', 'ed', 'edstays.csv.gz'))[0])
@@ -982,14 +986,16 @@ class MIMICIVEDCXRMultimodalModel(VisionEncoderDecoderModel):
             # MIMIC-CXR report sections:
             print(f'Copying mimic_cxr_sectioned into database...')  
             connect.sql(f"CREATE OR REPLACE TABLE mimic_cxr_sectioned AS FROM '{mimic_cxr_sectioned_path}';")   
-            connect.sql("ALTER TABLE mimic_cxr_sectioned RENAME COLUMN column0 TO study;")
-            connect.sql("ALTER TABLE mimic_cxr_sectioned RENAME COLUMN column1 TO impression;")
-            connect.sql("ALTER TABLE mimic_cxr_sectioned RENAME COLUMN column2 TO findings;")
-            connect.sql("ALTER TABLE mimic_cxr_sectioned RENAME COLUMN column3 TO indication;")
-            connect.sql("ALTER TABLE mimic_cxr_sectioned RENAME COLUMN column4 TO history;")
-            connect.sql("ALTER TABLE mimic_cxr_sectioned RENAME COLUMN column5 TO last_paragraph;")
-            connect.sql("ALTER TABLE mimic_cxr_sectioned RENAME COLUMN column6 TO comparison;")
-            connect.sql("DELETE FROM mimic_cxr_sectioned WHERE study='study';")
+            columns = list(connect.sql('FROM mimic_cxr_sectioned LIMIT 1').df().columns)
+            if 'column0' in columns:  # If the column headers are not read correctly:
+                connect.sql("ALTER TABLE mimic_cxr_sectioned RENAME COLUMN column0 TO study;")
+                connect.sql("ALTER TABLE mimic_cxr_sectioned RENAME COLUMN column1 TO impression;")
+                connect.sql("ALTER TABLE mimic_cxr_sectioned RENAME COLUMN column2 TO findings;")
+                connect.sql("ALTER TABLE mimic_cxr_sectioned RENAME COLUMN column3 TO indication;")
+                connect.sql("ALTER TABLE mimic_cxr_sectioned RENAME COLUMN column4 TO history;")
+                connect.sql("ALTER TABLE mimic_cxr_sectioned RENAME COLUMN column5 TO last_paragraph;")
+                connect.sql("ALTER TABLE mimic_cxr_sectioned RENAME COLUMN column6 TO comparison;")
+                connect.sql("DELETE FROM mimic_cxr_sectioned WHERE study='study';")
 
             splits = connect.sql("FROM mimic_cxr_2_0_0_split").df()
             reports = connect.sql("FROM mimic_cxr_sectioned").df()
@@ -1065,6 +1071,7 @@ class MIMICIVEDCXRMultimodalModel(VisionEncoderDecoderModel):
             df = df.sort_values(by='study_datetime', ascending=False)
             df = df.groupby('study_id').first().reset_index()
 
+            print('Searching for studies associated with an ED stay...')
             for _, row in tqdm(df.iterrows(), total=df.shape[0]):
                 edstays = connect.sql(
                     f"""
@@ -1109,21 +1116,39 @@ class MIMICIVEDCXRMultimodalModel(VisionEncoderDecoderModel):
                 df = pd.DataFrame(v)
                 df = df.drop_duplicates(subset=['study_id', 'stay_id'])
                 connect.sql(f"CREATE TABLE {k}_study_ids AS SELECT * FROM df")
+            
+            connect.close()
+
+        if not os.path.exists(mimic_cxr_jpg_lmdb_path):
+            print('Preparing MIMIC-CXR-JPG LMDB database...')
+            pattern = os.path.join(physionet_dir, 'mimic-cxr-jpg', '*', 'files')
+            mimic_cxr_jpg_dir = glob(pattern)
+            assert len(mimic_cxr_jpg_dir), f'Multiple directories matched the pattern {pattern}: {mimic_cxr_jpg_dir}. Only one is required.'
+            prepare_mimic_cxr_jpg_lmdb(
+                mimic_iv_duckdb_path=mimic_iv_duckdb_path, 
+                mimic_cxr_jpg_dir=mimic_cxr_jpg_dir[0], 
+                mimic_cxr_jpg_lmdb_path=mimic_cxr_jpg_lmdb_path, 
+                map_size_tb=0.65
+            )
 
     @staticmethod                
-    def get_dataset(split, transforms, database_path, mimic_cxr_jpg_dir, max_images_per_study=5, records=None):
+    def get_dataset(split, transforms, database_dir, max_images_per_study=5, mimic_cxr_jpg_dir=None, records=None):
+        
+        mimic_iv_duckdb_path = os.path.join(database_dir, 'mimic_iv_duckdb.db')
+        mimic_cxr_jpg_lmdb_path = os.path.join(database_dir, 'mimic_cxr_jpg_lmdb.db') if mimic_cxr_jpg_dir is None else None
         
         if records is None:
             
             # This is the setup for CXRs + all effective inputs - medicine reconciliation:
-            records = EDCXRSubjectRecords(database_path=database_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1)) 
+            records = EDCXRSubjectRecords(database_path=mimic_iv_duckdb_path, time_delta_map=lambda x: 1 / math.sqrt(x + 1)) 
             
             records.ed_module_tables = {k: records.ed_module_tables[k] for k in ['edstays', 'triage', 'vitalsign']}
             records.mimic_cxr_tables = {k: records.mimic_cxr_tables[k] for k in ['mimic_cxr_sectioned']}
             records.mimic_cxr_tables['mimic_cxr_sectioned'].text_columns = ['indication', 'history']
         
         dataset = StudyIDEDStayIDSubset(
-                dataset_dir=mimic_cxr_jpg_dir,
+                mimic_cxr_jpg_lmdb_path=mimic_cxr_jpg_lmdb_path,
+                mimic_cxr_dir=mimic_cxr_jpg_dir,
                 transforms=transforms,
                 split=split,
                 max_images_per_study=max_images_per_study,
