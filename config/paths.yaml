@@ -1,9 +1,5 @@
-# exp_dir: experiments
-# dataset_dir: datasets
-# ckpt_zoo_dir: checkpoints
-# database_path: database/cxrmate_ed.db
+exp_dir: experiments
+dataset_dir: datasets
+ckpt_zoo_dir: checkpoints
+database_path: database/cxrmate_ed.db
 
-exp_dir: /scratch3/nic261/tmp/experiments
-dataset_dir: /scratch3/nic261/datasets
-ckpt_zoo_dir: /scratch3/nic261/tmp/checkpoints
-database_path: /scratch3/nic261/database/cxrmate_ed.db
