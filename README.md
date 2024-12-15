@@ -114,7 +114,7 @@ for i,j in zip(findings, impression):
 
 ## Generated reports
 
-Generated reports (findings and impression sections) for the test set are provided in [`test_set_generated_reports`](https://github.com/aehrc/anon/blob/main/test_set_generated_reports).
+Generated reports (findings and impression sections) for the test set are provided in [`mimic_cxr_test_set_generated_reports`](https://github.com/aehrc/anon/blob/main/mimic_cxr_test_set_generated_reports.csv).
 
 ## Environment
 
