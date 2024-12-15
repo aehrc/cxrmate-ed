@@ -1,5 +1,3 @@
 exp_dir: experiments
-dataset_dir: datasets
-ckpt_zoo_dir: checkpoints
-database_path: database/cxrmate_ed.db
+database_dir: database
 

@@ -2,8 +2,8 @@ defaults:
   - base
   - _self_
 
-module: modules.lightning_modules.baseline.no_prompt
-definition: NoPrompt
+module: cxrmate_ed.lightning_module
+definition: Images
 
 mbatch_size: 8
 accumulated_mbatch_size: null

@@ -1,0 +1,89 @@
+{
+    "medrecon": {
+        "index_columns": [
+            "gsn",
+            "ndc",
+            "etc_rn",
+            "etccode"
+        ],
+        "text_columns": ["name"],
+        "groupby": "stay_id",
+        "time_column": "edstays_intime"
+    },
+    "edstays": {
+        "index_columns": [
+            "gender",
+            "race",
+            "arrival_transport"
+        ],
+        "groupby": "stay_id",
+        "time_column": "edstays_intime"
+    },
+    "triage": {
+        "text_columns": [
+            "chiefcomplaint",
+            "pain"
+        ],
+        "value_columns": [
+            "temperature",
+            "heartrate",
+            "resprate",
+            "o2sat",
+            "sbp",
+            "dbp",
+            "acuity"
+        ],
+        "groupby": "stay_id",
+        "time_column": "edstays_intime"
+    },
+    "vitalsign": {
+        "index_columns": [
+            "rhythm"
+        ],
+        "text_columns": [
+            "pain"
+        ],
+        "value_columns": [
+            "temperature",
+            "heartrate",
+            "resprate",
+            "o2sat",
+            "sbp",
+            "dbp"
+        ],
+        "groupby": "vitalsign_charttime",
+        "time_column": "vitalsign_charttime"
+    },
+    "pyxis": {
+        "index_columns": [
+            "med_rn",
+            "name",
+            "gsn_rn",
+            "gsn"
+        ],
+        "groupby": "pyxis_charttime",
+        "time_column": "pyxis_charttime"
+    },
+    "mimic_cxr_2_0_0_metadata": {
+        "index_columns": [
+            "PerformedProcedureStepDescription",
+            "ViewPosition",
+            "ProcedureCodeSequence_CodeMeaning",
+            "ViewCodeSequence_CodeMeaning",
+            "PatientOrientationCodeSequence_CodeMeaning"
+        ],
+        "groupby": "study_id"
+    },
+    "mimic_cxr_sectioned": {
+        "groupby": "study_id",
+        "text_columns": [
+            "indication",
+            "history",
+            "comparison"
+        ],
+        "target_sections": [
+            "findings",
+            "impression"
+        ]
+    }
+}

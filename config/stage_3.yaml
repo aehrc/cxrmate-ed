@@ -2,26 +2,32 @@ defaults:
   - base
   - _self_
 
-module: modules.lightning_modules.cxrmate_ed.scst_rewards
-definition: SCSTCXRBERTBERTScoreReward
+module: cxrmate_ed.lightning_module
+definition: SCSTSectionsWeightedCXRBERTBERTScoreARNReward
 
 # 4 devices each with a mini-batch size of 8 equates to a mini-batch size of 32 with DDP.
 devices: 4
 mbatch_size: 8
 accumulated_mbatch_size: null
 
-max_epochs: 24
+max_epochs: 32
 
 precision: 32
 float32_matmul_precision: highest
 
-warm_start_ckpt_path: /datasets/work/hb-mlaifsp-mm/work/repositories/transmodal/cxrmate2/experiments/cxrmate2/ed_cxr/010_minus_medrecon_prior/trial_1/epoch=4-step=47750-val_report_chexbert_f1_macro=0.352807.ckpt
+warm_start_other_exp_trial_dir: experiments/cxrmate_ed/stage_2/trial_0
 warm_start_optimiser: false
 allow_warm_start_optimiser_partial: false
 
 lr: 5e-6
 num_warmup_steps: 5000
 learning_rate_monitor: True
-history: 0
 enable_progress_bar: True
 monitor: val_findings_bertscore_f1
+
+weights: [0.45, 0.45, 0.1]
+reward_section_weights: [0.75, 0.25]
+tables_filter: ['mimic_cxr_sectioned', 'triage', 'medrecon']
+prompt_report_sections_filter: ['indication', 'history']
+add_time_deltas: True
+reward_no_repeat_ngram_size: 3

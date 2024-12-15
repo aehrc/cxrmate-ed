@@ -1,0 +1,21 @@
+{
+    "medrecon": 0, 
+    "edstays": 1, 
+    "triage": 2, 
+    "vitalsign": 3, 
+    "pyxis": 4, 
+    "mimic_cxr_2_0_0_metadata": 5, 
+    "medrecon_name": 6, 
+    "triage_chiefcomplaint": 7, 
+    "triage_pain": 8, 
+    "vitalsign_pain": 9, 
+    "indication": 10, 
+    "history": 11, 
+    "findings": 12, 
+    "impression": 13, 
+    "image": 14,
+    "comparison": 15,
+    "prior_findings": 16,
+    "prior_impression": 17,
+    "prior_image": 18
+}

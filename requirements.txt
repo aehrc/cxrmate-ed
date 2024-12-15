@@ -1,16 +1,32 @@
 # General:
 dlhpcstarter
 duckdb
+isort
+lightning
 pandas
-sentencepiece
-tensorboard
+torch
 torchmetrics
-transformers==4.40.*  # While this issue is being resolved: https://github.com/huggingface/transformers/issues/31171
+torchvision
+transformers
 
 # Project specific:
 timm
 
+# Demonstration:
+streamlit
+
 # Metrics:
 bert-score
-pycocoevalcap
-pycocotools
+f1chexbert
+green-score
+nltk
+rouge-score
+
+# For RadGraph:
+git+https://github.com/aehrc/radgraph.git
+
+# Results:
+patchworklib
+pingouin
+plotnine
+pypdf
