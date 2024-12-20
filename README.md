@@ -1,5 +1,6 @@
 # CXRMate-ED: The Impact of Auxiliary Patient Data on Automated Chest X-Ray Report Generation and How to Incorporate It
 
+-----
 
 ![Multimodal language model](docs/mlm.png)
 *The multimodal language model of CXRMate-ED.*
@@ -7,6 +8,7 @@
 ![Patient data embeddings](docs/embeddings.png)
 *The patient data embedding pipeline.*
 
+-----
 
 This is the model and data pipeline for the CXRMate-ED model from: https://arxiv.org/abs/2406.13181v2.
 
@@ -15,12 +17,14 @@ The abstract from the paper:
 "This study investigates the integration of diverse patient data sources into multimodal language models for automated chest X-ray (CXR) report generation. Traditionally, CXR report generation relies solely on CXR images and limited radiology data, overlooking valuable information from patient health records, particularly from emergency departments. Utilising the MIMIC-CXR and MIMIC-IV-ED datasets, we incorporate detailed patient information such as vital signs, medicines, and clinical history to enhance diagnostic accuracy. We introduce a novel approach to transform these heterogeneous data sources into embeddings that prompt a multimodal language model; this significantly enhances the diagnostic accuracy of generated radiology reports. Our comprehensive evaluation demonstrates the benefits of using a broader set of patient data, underscoring the potential for enhanced diagnostic capabilities and better patient outcomes through the integration of multimodal data in CXR report generation."
 
 ## Hugging Face Hub
-The model and data pipeline are available on Hugging Face Hub:
+The model and data pipeline are available on Hugging Face Hub: https://huggingface.co/aehrc/cxrmate-ed
 
-https://huggingface.co/aehrc/cxrmate-ed
+-----
 
 ![Patient data sources](docs/data.png)
 *Patient data sources available for an exam from MIMIC-CXR and MIMIC-IV-ED.*
+
+-----
 
 
 ## MIMIC-CXR & MIMIC-IV-ED Dataset:
