@@ -8,7 +8,7 @@
 *The patient data embedding pipeline.*
 
 
-This is the model and data pipeline for the CXRMate-ED model from: https://arxiv.org/pdf/2406.13181.
+This is the model and data pipeline for the CXRMate-ED model from: https://arxiv.org/abs/2406.13181v2.
 
 The abstract from the paper:
 
