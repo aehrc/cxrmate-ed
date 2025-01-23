@@ -707,7 +707,7 @@ class VitalsignExclusive(FreezeEncoderPartialWarmStartOptimiser):
         self.train_set, self.val_set, self.test_set = self.model.get_dataset(
             self.database_dir,
             self.max_train_images_per_study,
-            study_id_split='mimic_iv_ed_mimic_cxr_jpg_vitalsign',
+            test_study_id_json_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mimic_iv_ed_mimic_cxr_jpg_vitalsign_test_study_ids.json'),
             test_set_only=True,
         )
         
@@ -727,7 +727,7 @@ class PyxisExclusive(FreezeEncoderPartialWarmStartOptimiser):
         self.train_set, self.val_set, self.test_set = self.model.get_dataset(
             self.database_dir,
             self.max_train_images_per_study,
-            study_id_split='mimic_iv_ed_mimic_cxr_jpg_pyxis',
+            test_study_id_json_path=os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mimic_iv_ed_mimic_cxr_jpg_pyxis_test_study_ids.json'),
             test_set_only=True,
         )
         
@@ -1366,7 +1366,7 @@ class EASTSectionsWeightedCXRBERTBERTScoreARNReward(EASTSectionsWeighted):
         """
         self.reward_cxrbert = CXRBERTReward(device=self.device)
         self.reward_bertscore = BERTScoreReward(device=self.device, num_workers=self.num_workers)
-        self.reward_ngram = NoRepeatNGramReward(n=self.reward_no_repeat_ngram_size, device=self.device, tokenizer=self.tokenizer)
+        self.reward_ngram = ARNReward(n=self.reward_no_repeat_ngram_size, device=self.device, tokenizer=self.tokenizer)
 
     def reward(self, predictions, labels):
         reward_cxrbert = self.reward_cxrbert(predictions, labels)

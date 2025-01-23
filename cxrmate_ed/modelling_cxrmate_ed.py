@@ -1003,7 +1003,15 @@ class CXRMateEDModel(transformers.LlavaForConditionalGeneration):
         
         prepare_dataset(physionet_dir=physionet_dir, database_dir=database_dir)
 
-    def get_dataset(self, database_dir, max_train_images_per_study=None, study_id_split='mimic_iv_ed_mimic_cxr_jpg', test_set_only=False):
+    def get_dataset(
+        self, 
+        database_dir, 
+        max_train_images_per_study=None, 
+        train_study_id_json_path=None, 
+        val_study_id_json_path=None, 
+        test_study_id_json_path=None, 
+        test_set_only=False,
+    ):
         
         dataset_path = os.path.join(database_dir, 'mimic_iv_ed_mimic_cxr_jpg_dataset')
         
@@ -1071,9 +1079,10 @@ class CXRMateEDModel(transformers.LlavaForConditionalGeneration):
         # Train set:
         if not test_set_only:
             
-            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'{study_id_split}_train_study_ids.json')
-            path = path if os.path.exists(path) else hf_hub_download(repo_id='aehrc/cxrmate-ed', filename=f'{study_id_split}_train_study_ids.json')
-            with open(path, 'r') as f:
+            if train_study_id_json_path is None:
+                train_study_id_json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mimic_iv_ed_mimic_cxr_jpg_train_study_ids.json')
+                train_study_id_json_path = train_study_id_json_path if os.path.exists(train_study_id_json_path) else hf_hub_download(repo_id='aehrc/cxrmate-ed', filename='mimic_iv_ed_mimic_cxr_jpg_train_study_ids.json')
+            with open(train_study_id_json_path, 'r') as f:
                 study_ids = json.load(f)
             train_set = dataset['train']
             train_set_study_ids = train_set['study_id']
@@ -1088,9 +1097,10 @@ class CXRMateEDModel(transformers.LlavaForConditionalGeneration):
 
         # Validation set:
         if not test_set_only:
-            path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'{study_id_split}_validate_study_ids.json')
-            path = path if os.path.exists(path) else hf_hub_download(repo_id='aehrc/cxrmate-ed', filename=f'{study_id_split}_validate_study_ids.json')
-            with open(path, 'r') as f:
+            if val_study_id_json_path is None:
+                val_study_id_json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mimic_iv_ed_mimic_cxr_jpg_validate_study_ids.json')
+                val_study_id_json_path = val_study_id_json_path if os.path.exists(val_study_id_json_path) else hf_hub_download(repo_id='aehrc/cxrmate-ed', filename='mimic_iv_ed_mimic_cxr_jpg_validate_study_ids.json')
+            with open(val_study_id_json_path, 'r') as f:
                 study_ids = json.load(f)
             val_set = dataset['validate']
             val_set_study_ids = val_set['study_id']
@@ -1104,9 +1114,10 @@ class CXRMateEDModel(transformers.LlavaForConditionalGeneration):
             val_set = None
 
         # Test set:
-        path = os.path.join(os.path.dirname(os.path.abspath(__file__)), f'{study_id_split}_test_study_ids.json')
-        path = path if os.path.exists(path) else hf_hub_download(repo_id='aehrc/cxrmate-ed', filename=f'{study_id_split}_test_study_ids.json')
-        with open(path, 'r') as f:
+        if test_study_id_json_path is None:
+            test_study_id_json_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'mimic_iv_ed_mimic_cxr_jpg_test_study_ids.json')
+            test_study_id_json_path = test_study_id_json_path if os.path.exists(test_study_id_json_path) else hf_hub_download(repo_id='aehrc/cxrmate-ed', filename='mimic_iv_ed_mimic_cxr_jpg_test_study_ids.json')
+        with open(test_study_id_json_path, 'r') as f:
             study_ids = json.load(f)
         test_set = dataset['test']
         test_set_study_ids = test_set['study_id']
