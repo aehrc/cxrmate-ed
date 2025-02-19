@@ -796,7 +796,28 @@ class CXRMateEDModel(transformers.LlavaForConditionalGeneration):
         position_ids[row_indices, col_indices.flatten()] = torch.arange(num_cols, device=time_deltas.device)[None, :].expand(num_rows, -1).flatten()
         position_ids.masked_fill_(attention_mask == 0, 1)  # Following: https://github.com/huggingface/transformers/blob/c5f0288bc7d76f65996586f79f69fba8867a0e67/src/transformers/models/llama/modeling_llama.py#L1285
         
+        for i in range(position_ids.shape[0]):
+            assert self.validate_position_ids(position_ids[i])
+            
         return position_ids
+    
+    @staticmethod
+    def validate_position_ids(tensor, repeat_value=1):
+        unique, counts = torch.unique(tensor, return_counts=True)
+
+        # Check if all integers from 0 to tensor.max() exist:
+        full_range = torch.arange(0, tensor.max() + 1, device=tensor.device)
+        if not torch.equal(unique.sort()[0], full_range):
+            return False
+
+        # Check for repeated values except for repeat_value:
+        repeated = unique[counts > 1]
+        if repeated.nelement() == 0:
+            return True
+        if not (repeated.numel() == 1 and repeated.item() == repeat_value):
+            return False
+
+        return True
     
     def prepare_index_value_feats(self, table, batch):
                

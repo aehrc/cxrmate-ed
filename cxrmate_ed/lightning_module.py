@@ -236,17 +236,17 @@ class MIMICIVEDCXRReportGen(LightningModule):
             # )
 
             # GREEN:
-            # self.test_metrics.append(f'test_{i}_green')
-            # setattr(
-            #     self,
-            #     self.test_metrics[-1],
-            #     GREENMetric(
-            #         mbatch_size=self.mbatch_size,
-            #         exp_dir=self.exp_dir_trial,
-            #         split=f'test_{i}',
-            #         accumulate_over_dicoms=self.accumulate_over_dicoms,
-            #     ),
-            # )
+            self.test_metrics.append(f'test_{i}_green')
+            setattr(
+                self,
+                self.test_metrics[-1],
+                GREENMetric(
+                    mbatch_size=self.mbatch_size,
+                    exp_dir=self.exp_dir_trial,
+                    split=f'test_{i}',
+                    accumulate_over_dicoms=self.accumulate_over_dicoms,
+                ),
+            )
 
         # Report logging:
         self.val_report_logger = ReportLogger(

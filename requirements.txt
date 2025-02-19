@@ -1,9 +1,11 @@
 # General:
+datasets
 dlhpcstarter
 duckdb
 isort
 lightning
 pandas
+sentencepiece
 torch
 torchmetrics
 torchvision
@@ -18,9 +20,9 @@ streamlit
 # Metrics:
 bert-score
 f1chexbert
-green-score
 nltk
 rouge-score
+sentence-transformers
 
 # For RadGraph:
 git+https://github.com/aehrc/radgraph.git

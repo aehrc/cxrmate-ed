@@ -116,6 +116,48 @@ for i,j in zip(findings, impression):
 
 ```
 
+#### Inference for a study | no emergency data | no Hugging Face Datasets
+```python
+import torch
+import transformers
+from torchvision.io import read_image
+
+# Modules:
+model = transformers.AutoModelForCausalLM.from_pretrained('aehrc/cxrmate-ed', trust_remote_code=True).to(device=device)
+tokenizer = transformers.PreTrainedTokenizerFast.from_pretrained('aehrc/cxrmate-ed')
+
+study_image_paths = ['...', '...']
+
+indication = '...'
+history = '...'
+
+images = [read_image(i) for i in img_path_list_idx]
+images = [torch.stack([model.test_transforms(i) for i in images])]
+images = torch.nn.utils.rnn.pad_sequence(images, batch_first=True, padding_value=0.0).to(device=device)
+image_time_deltas = [[model.zero_time_delta_value] * images.shape[1]]
+
+# Convert the patient data in the batch into embeddings:
+inputs_embeds, attention_mask, token_type_ids, position_ids, bos_token_ids = model.prepare_inputs(
+    tokenizer=tokenizer, images=images, image_time_deltas=image_time_deltas, study_id=[0], indication=[[indication]], history=[[history]]
+)
+            
+# Generate reports:
+output_ids = model.generate(
+    input_ids=bos_token_ids,
+    decoder_inputs_embeds=inputs_embeds,
+    decoder_token_type_ids=token_type_ids,
+    prompt_attention_mask=attention_mask,
+    prompt_position_ids=position_ids,
+    special_token_ids=[tokenizer.sep_token_id],
+    max_length=256,
+    num_beams=4,
+    return_dict_in_generate=True,
+)['sequences']
+
+# Findings and impression section:
+findings, impression = model.split_and_decode_sections(output_ids, [tokenizer.sep_token_id, tokenizer.eos_token_id], tokenizer)           
+```
+
 ## Generated reports
 
 Generated reports (findings and impression sections) for the test set are provided in [`mimic_cxr_test_set_generated_reports`](https://github.com/aehrc/anon/blob/main/mimic_cxr_test_set_generated_reports.csv).
