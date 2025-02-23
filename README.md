@@ -126,10 +126,10 @@ from torchvision.io import read_image
 model = transformers.AutoModelForCausalLM.from_pretrained('aehrc/cxrmate-ed', trust_remote_code=True).to(device=device)
 tokenizer = transformers.PreTrainedTokenizerFast.from_pretrained('aehrc/cxrmate-ed')
 
-study_image_paths = ['...', '...']
+study_image_paths = ['...', '...']  # e.g., ['img1.jpeg', 'img2.jpeg']. 
 
-indication = '...'
-history = '...'
+indication = '...'  # Set to None if not using.
+history = '...'  # Set to None if not using.
 
 images = [read_image(i) for i in img_path_list_idx]
 images = [torch.stack([model.test_transforms(i) for i in images])]
