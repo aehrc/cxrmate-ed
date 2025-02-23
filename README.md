@@ -116,7 +116,7 @@ for i,j in zip(findings, impression):
 
 ```
 
-#### Inference for a study | no emergency data | no Hugging Face Datasets
+#### Inference for a study (no emergency data & no Hugging Face Datasets)
 ```python
 import torch
 import transformers
