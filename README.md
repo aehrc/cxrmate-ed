@@ -10,11 +10,30 @@
 
 -----
 
-This is the model and data pipeline for the CXRMate-ED model from: https://arxiv.org/abs/2406.13181v2.
+This is the model and data pipeline for the CXRMate-ED model from: 
+
+```
+@inproceedings{nicolson-etal-2025-impact,
+    title = "The Impact of Auxiliary Patient Data on Automated Chest {X}-Ray Report Generation and How to Incorporate It",
+    author = "Nicolson, Aaron  and Zhuang, Shengyao and Dowling, Jason and Koopman, Bevan",
+    editor = "Che, Wanxiang  and Nabende, Joyce and Shutova, Ekaterina and Pilehvar, Mohammad Taher",
+    booktitle = "Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)",
+    month = jul,
+    year = "2025",
+    address = "Vienna, Austria",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2025.acl-long.9/",
+    doi = "10.18653/v1/2025.acl-long.9",
+    pages = "177--203",
+    ISBN = "979-8-89176-251-0",
+    abstract = "This study investigates the integration of diverse patient data sources into multimodal language models for automated chest X-ray (CXR) report generation. Traditionally, CXR report generation relies solely on data from a patient{'}s CXR exam, overlooking valuable information from patient electronic health records. Utilising the MIMIC-CXR and MIMIC-IV-ED datasets, we investigate the use of patient data from emergency department (ED) records {---} such as vital signs measured and medicines reconciled during an ED stay {---} for CXR report generation, with the aim of enhancing diagnostic accuracy. We also investigate conditioning CXR report generation on the clinical history section of radiology reports, which has been overlooked in the literature. We introduce a novel approach to transform these heterogeneous data sources into patient data embeddings that prompt a multimodal language model (CXRMate-ED). Our comprehensive evaluation indicates that using a broader set of patient data significantly enhances diagnostic accuracy. The model, training code, and dataset are publicly available."
+}
+```
 
 The abstract from the paper:
 
-"This study investigates the integration of diverse patient data sources into multimodal language models for automated chest X-ray (CXR) report generation. Traditionally, CXR report generation relies solely on CXR images and limited radiology data, overlooking valuable information from patient health records, particularly from emergency departments. Utilising the MIMIC-CXR and MIMIC-IV-ED datasets, we incorporate detailed patient information such as vital signs, medicines, and clinical history to enhance diagnostic accuracy. We introduce a novel approach to transform these heterogeneous data sources into embeddings that prompt a multimodal language model; this significantly enhances the diagnostic accuracy of generated radiology reports. Our comprehensive evaluation demonstrates the benefits of using a broader set of patient data, underscoring the potential for enhanced diagnostic capabilities and better patient outcomes through the integration of multimodal data in CXR report generation."
+"This study investigates the integration of diverse patient data sources into multimodal language models for automated chest X-ray (CXR) report generation. Traditionally, CXR report generation relies solely on data from a patient{'}s CXR exam, overlooking valuable information from patient electronic health records. Utilising the MIMIC-CXR and MIMIC-IV-ED datasets, we investigate the use of patient data from emergency department (ED) records {---} such as vital signs measured and medicines reconciled during an ED stay {---} for CXR report generation, with the aim of enhancing diagnostic accuracy. We also investigate conditioning CXR report generation on the clinical history section of radiology reports, which has been overlooked in the literature. We introduce a novel approach to transform these heterogeneous data sources into patient data embeddings that prompt a multimodal language model (CXRMate-ED). Our comprehensive evaluation indicates that using a broader set of patient data significantly enhances diagnostic accuracy. The model, training code, and dataset are publicly available."
+
 
 ## Hugging Face Hub
 The model and data pipeline are available on Hugging Face Hub: https://huggingface.co/aehrc/cxrmate-ed
